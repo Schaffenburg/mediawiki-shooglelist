@@ -70,7 +70,8 @@ class ShoogleList {
             $attr = array(
                 'name'          => $Title,
                 'image'         => $defaultImg,
-                'beschreibung'  => $defaultDesc
+                'beschreibung'  => $defaultDesc,
+                'visible'       => true
             );
 
             foreach( $attr as $key => $value ) {
@@ -80,6 +81,10 @@ class ShoogleList {
                         $attr[ $key ] = $val;
                     }
                 }
+            }
+
+            if( $attr['visible'] !== true ) {
+                continue;    
             }
 
 
