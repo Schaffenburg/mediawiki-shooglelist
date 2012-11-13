@@ -85,7 +85,7 @@ class ShoogleList {
 
             $output .= '<li class="shoogle-item">';
             $output .= sprintf('<span class="shoogle-title">[[%s|%s]]</span>', $Title, $attr['name'] );
-            $output .= sprintf('<span class="shoogle-image">[[Image:%s|180px|link=%s]]</span>', $attr['image'], $Title );
+            $output .= sprintf('<span class="shoogle-image">[[Image:%s|180px|link=%s|alt=%s]]</span>', $attr['image'], $Title, $Title );
             $output .= sprintf('<span class="shoogle-teaser">%s</span>', $attr['beschreibung'] );
             $otuput .= '</li>';
     }
