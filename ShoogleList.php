@@ -88,7 +88,7 @@ class ShoogleList {
 
         // Check if there is a cached potd list, if yes, return
         if( ($cache = $this->get_cache('shoogle_potd_cache')) !== false ) {
-         //   return $cache;
+            return $cache;
         }
 
         $limit = 4;
