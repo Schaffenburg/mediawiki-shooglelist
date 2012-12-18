@@ -88,7 +88,7 @@ class ShoogleList {
 
         // Check if there is a cached potd list, if yes, return
         if( ($cache = $this->get_cache('shoogle_potd_cache')) !== false ) {
-            return $cache;
+         //   return $cache;
         }
 
         $limit = 4;
@@ -129,6 +129,11 @@ class ShoogleList {
             $key = array_rand( $filtered_articles );
             $article = $filtered_articles[$key];
 
+            // Skip articles without image
+            if( !$article->get_image() ) {
+                continue;
+            }
+
             $random_articles[] = $article;
             $last_potd[] = $article->get_title();
 
@@ -152,6 +157,14 @@ class ShoogleList {
         return $output;
     }
 
+    private function trim_text($text, $length, $abbrv='...') {
+        if( strlen($text) > $length ) {
+            return substr($text, 0, $length-strlen($abbrv)).$abbrv;
+        }
+
+        return $text;
+    }
+
     /**
     * Renders a list of articles in wiki format
     * 
@@ -160,6 +173,17 @@ class ShoogleList {
     */
 
     private function get_project_list( $articles, $argv ) {
+
+        $thumb_size = 180;
+	if( isset( $argv['thumb_size']) ) {
+            $thumb_size = (int) $argv['thumb_size'];
+	}
+
+        $trim = false;
+        if( isset( $argv['trim_text'] ) ) {
+            $trim = (int) $argv['trim_text'];
+        }
+
 
         $output = '<div class="shoogle-box">';
         $output .= '<ul class="shoogle-list clearfix">';
@@ -170,10 +194,16 @@ class ShoogleList {
                 continue;    
             }
 
+            $desc = $article->get_description();
+            $abbrv_desc = $desc;
+            if( $trim ) {
+                $abbrv_desc = $this->trim_text($desc, $trim);
+            }
+
             $output .= '<li class="shoogle-item">';
             $output .= sprintf('<span class="shoogle-title">[[%s|%s]]</span>', $article->get_title(), $article->get_name() );
-            $output .= sprintf('<span class="shoogle-image">[[Image:%1$s|180px|link=%2$s|alt=%2$s]]</span>', $article->get_image(), $article->get_title() );
-            $output .= sprintf('<span class="shoogle-teaser">%s</span>', $article->get_description() );
+            $output .= sprintf('<span class="shoogle-image">[[Image:%1$s|%2$dpx|link=%3$s|alt=%3$s]]</span>', $article->get_image(), $thumb_size, $article->get_title() );
+            $output .= sprintf('<span class="shoogle-teaser" title="%s">%s</span>', $desc, $abbrv_desc );
             $otuput .= '</li>';
         }
 
