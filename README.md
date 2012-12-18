@@ -17,11 +17,11 @@ As you can see, you are able to define an default image and description, which i
 
 Possible arguments are:
 
-defaultdesc (string) - default description if the article doesnt have an description
-defaultimage (string) - default image if article doesnt have an image
-thumb_size (integer) - thumbnail size (default 180)
-trim_text (integer) - trims text to a given length (default off)
-limit (integer) - on "project of the day"-mode the amount of items shown
+    defaultdesc (string) - default description if the article doesnt have an description
+    defaultimage (string) - default image if article doesnt have an image
+    thumb_size (integer) - thumbnail size (default 180)
+    trim_text (integer) - trims text to a given length (default off)
+    limit (integer) - on "project of the day"-mode the amount of items shown
 
 
 ## Article Definition
