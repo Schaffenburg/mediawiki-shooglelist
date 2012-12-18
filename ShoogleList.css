@@ -35,3 +35,10 @@
     font-family: Lucida Grande, Verdana, Arial, sans-serif;
     font-size: 12px;
 }
+
+.shoogle-potd .shoogle-item {
+    width: 160px;
+    padding: 0;
+    margin: 4px 6px;
+    height: auto;
+}
