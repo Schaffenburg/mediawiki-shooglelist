@@ -15,6 +15,15 @@ To use shooglelist inside your mediawiki you only have to specify the shoogle-ta
 
 As you can see, you are able to define an default image and description, which is used if neither the image or the description is specified in the article project-template. This examples indexes all articles inside the category "Projekt".
 
+Possible arguments are:
+
+defaultdesc (string) - default description if the article doesnt have an description
+defaultimage (string) - default image if article doesnt have an image
+thumb_size (integer) - thumbnail size (default 180)
+trim_text (integer) - trims text to a given length (default off)
+limit (integer) - on "project of the day"-mode the amount of items shown
+
+
 ## Article Definition
 
 In order to work correctly you have to specify a ProjektInfobox-Template inside your article:
