@@ -46,3 +46,8 @@
 .shoogle-potd .shoogle-title {
     font-size: 14px;    
 }
+
+.shoogle-sortable {
+  text-align: right;
+  margin-right: 45px;
+}
