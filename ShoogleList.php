@@ -131,7 +131,7 @@ class ShoogleList {
         // Retrieve internal wiki title of the category
         $title = Title::newFromText($category);
 
-        list($orderByField, $orderByDirection) = ShoogleListSortable::getOrderTableAndDirection(self::$SORTABLE_FIELDS, 'page_id', 'ASC');
+        list($orderByField, $orderByDirection) = ShoogleListSortable::getOrderTableAndDirection(self::$SORTABLE_FIELDS, 'page_id', 'DESC');
 
         // Retrieve all articles by current category
         $articles = $this->get_articles_by_category($title, $orderByField, $orderByDirection);
