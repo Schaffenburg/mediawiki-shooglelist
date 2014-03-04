@@ -33,7 +33,7 @@ class ShoogleListSortable {
 
     public function hookShoogleSortable($category, $argv, $parser) {
 
-        $defaultField = 'cl_sortkey';
+        $defaultField = 'page_id';
 	if(isset($argv['defaultField'])) {
             $defaultField = $argv['defaultField'];
         }
@@ -72,7 +72,7 @@ class ShoogleListSortable {
         return $output;
     }
 
-    public static function getOrderTableAndDirection(array $fields, $orderByField = 'cl_sortkey', $orderByDirection = 'ASC') {
+    public static function getOrderTableAndDirection(array $fields, $orderByField = 'page_id', $orderByDirection = 'ASC') {
 
         if(isset($_REQUEST[self::$QUERY_PARAMETER]) && !empty($_REQUEST[self::$QUERY_PARAMETER])) {
 
@@ -97,7 +97,7 @@ class ShoogleListSortable {
 
 class ShoogleList {
 
-    private static $SORTABLE_FIELDS = array('cl_sortkey', 'page_id');
+    private static $SORTABLE_FIELDS = array('cl_timestamp', 'page_id', 'cl_sortkey');
 
     // Default configuration
     private $settings = array(
