@@ -10,18 +10,97 @@ $wgExtensionCredits['parserhook'][] = array(
         'url'             => 'http://www.hackerspace-bamberg.de',
         'description'     => 'Generates a category list in Shoogle-Style'  );
 
+// Set up the new special page
+$dir = dirname( __FILE__ ) . '/';
+$wgExtensionMessagesFiles['ShoogleList'] = $dir . 'ShoogleList.i18n.php';
 
 // Register parser-hook
 function wfShoogleList() {
     new ShoogleList();
+    new ShoogleListSortable();
 }
 
 
+class ShoogleListSortable {
+
+    private static $QUERY_PARAMETER = 'shoogleOrder';
+
+    public function __construct() {
+        global $wgParser;
+        $wgParser->setHook('shoogleSortable', array(&$this, 'hookShoogleSortable'));
+    }
+
+
+    public function hookShoogleSortable($category, $argv, $parser) {
+
+        $defaultField = 'cl_sortkey';
+	if(isset($argv['defaultField'])) {
+            $defaultField = $argv['defaultField'];
+        }
+
+        $defaultDirection = 'ASC';
+        if(isset($argv['defaultDirection'])) {
+            $defaultDirection = $argv['defaultDirection'];
+        }
+
+        // we need at least one fields
+        $fields = explode(",", $argv['fields']);
+        if(count($fields) < 1) {
+            return '';
+        }
+
+        $selectedField = false;
+        if(isset($_REQUEST[self::$QUERY_PARAMETER]) && !empty($_REQUEST[self::$QUERY_PARAMETER])) {
+            $selectedField = $_REQUEST[self::$QUERY_PARAMETER];
+        }
+
+        $output = '<form method="GET" onchange="submit()" class="shoogle-sortable">';
+        $output .= sprintf('<select name="%s">', self::$QUERY_PARAMETER);
+
+        foreach($fields as $field) {
+            foreach(array('DESC' => '-', 'ASC' => '') as $order => $symbol) {
+                $selected = ($symbol.$field == $selectedField) ? 'selected' : '';
+                $output .= sprintf('<option value="%s" %s>%s (%s)</value>', $symbol.$field, $selected,
+                                                                            wfMessage('field_'.$field)->text(),
+                                                                            wfMessage('sort_'.$order)->text());
+            }
+        }
+
+        $output .= '</select>';
+        $output .= '</form>';
+        
+        return $output;
+    }
+
+    public static function getOrderTableAndDirection(array $fields, $orderByField = 'cl_sortkey', $orderByDirection = 'ASC') {
+
+        if(isset($_REQUEST[self::$QUERY_PARAMETER]) && !empty($_REQUEST[self::$QUERY_PARAMETER])) {
+
+            $reqValue = $_REQUEST[self::$QUERY_PARAMETER];
+
+            if($reqValue[0] == '-') {
+                $reqOrderByDirection = 'DESC';
+                $reqValue = substr($reqValue, 1);
+            } else {
+                $reqOrderByDirection = 'ASC';
+            }
+
+            if(in_array($reqValue, $fields)) {
+                $orderByField = $reqValue;
+                $orderByDirection = $reqOrderByDirection;
+            }
+	}
+
+        return array($orderByField, $orderByDirection);
+    }
+}
+
 class ShoogleList {
+
+    private static $SORTABLE_FIELDS = array('cl_sortkey', 'page_id');
 
     // Default configuration
     private $settings = array(
-            'sort' => true
             );
 
     public function __construct() {
@@ -52,8 +131,10 @@ class ShoogleList {
         // Retrieve internal wiki title of the category
         $title = Title::newFromText($category);
 
+        list($orderByField, $orderByDirection) = ShoogleListSortable::getOrderTableAndDirection(self::$SORTABLE_FIELDS, 'cl_sortkey', 'ASC');
+
         // Retrieve all articles by current category
-        $articles = $this->get_articles_by_category($title);
+        $articles = $this->get_articles_by_category($title, $orderByField, $orderByDirection);
 
         switch( @$argv['type'] ) {
 
@@ -69,7 +150,7 @@ class ShoogleList {
 
 
         global $wgOut, $wgScriptPath;
-        $wgOut->addExtensionStyle("{$wgScriptPath}/extensions/ShoogleList/ShoogleList.css");
+        $wgOut->addExtensionStyle("{$wgScriptPath}/extensions/ShoogleList/ShoogleList.css?x=y");
 
         $localParser = new Parser();
         $output = $localParser->parse($output, $parser->mTitle, $parser->mOptions);
@@ -143,7 +224,7 @@ class ShoogleList {
 
         // Write last projects to cache
         $this->write_cache('shoogle_potd_last', $last_potd, 48*3600 );
-    
+
         // Render project list
         $output = $this->get_project_list( $random_articles, $argv );
 
@@ -204,7 +285,7 @@ class ShoogleList {
             $output .= sprintf('<span class="shoogle-title">[[%s|%s]]</span>', $article->get_title(), $article->get_name() );
             $output .= sprintf('<span class="shoogle-image">[[Image:%1$s|%2$dpx|link=%3$s|alt=%3$s]]</span>', $article->get_image(), $thumb_size, $article->get_title() );
             $output .= sprintf('<span class="shoogle-teaser" title="%s">%s</span>', $desc, $abbrv_desc );
-            $otuput .= '</li>';
+            $output .= '</li>';
         }
 
 
@@ -216,16 +297,18 @@ class ShoogleList {
     }
 
 
-    private function get_articles_by_category($Title) {
+    private function get_articles_by_category($Title, $orderByField = 'cl_sortkey', $orderByDirection = 'DESC') {
 
         $dbr = wfGetDB(DB_SLAVE);
+
 
         // query database
         $res = $dbr->select(
                 array('page', 'categorylinks'),
-                array('page_title', 'page_namespace', 'cl_sortkey'),
+                array('page_title', 'page_namespace', $orderByField),
                 array('cl_from = page_id', 'cl_to' => $Title->getDBKey()),
-                array('ORDER BY' => 'cl_sortkey')
+		"shoogleList",
+                array('ORDER BY' => sprintf('%s %s', $orderByField, $orderByDirection))
                 );
 
         if( $res === false ) {
