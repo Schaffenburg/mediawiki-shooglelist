@@ -24,6 +24,7 @@ function wfShoogleList() {
 class ShoogleListSortable {
 
     private static $QUERY_PARAMETER = 'shoogleOrder';
+    public static $SORTABLE_FIELDS = array('cl_timestamp', 'page_id', 'cl_sortkey');
 
     public function __construct() {
         global $wgParser;
@@ -72,7 +73,7 @@ class ShoogleListSortable {
         return $output;
     }
 
-    public static function getOrderTableAndDirection(array $fields, $orderByField = 'page_id', $orderByDirection = 'ASC') {
+    public static function getOrderTableAndDirection(array $fields, $orderByField = 'page_id', $orderByDirection = 'DESC') {
 
         if(isset($_REQUEST[self::$QUERY_PARAMETER]) && !empty($_REQUEST[self::$QUERY_PARAMETER])) {
 
@@ -97,7 +98,6 @@ class ShoogleListSortable {
 
 class ShoogleList {
 
-    private static $SORTABLE_FIELDS = array('cl_timestamp', 'page_id', 'cl_sortkey');
 
     // Default configuration
     private $settings = array(
@@ -131,7 +131,7 @@ class ShoogleList {
         // Retrieve internal wiki title of the category
         $title = Title::newFromText($category);
 
-        list($orderByField, $orderByDirection) = ShoogleListSortable::getOrderTableAndDirection(self::$SORTABLE_FIELDS, 'page_id', 'DESC');
+        list($orderByField, $orderByDirection) = ShoogleListSortable::getOrderTableAndDirection(ShoogleListSortable::$SORTABLE_FIELDS);
 
         // Retrieve all articles by current category
         $articles = $this->get_articles_by_category($title, $orderByField, $orderByDirection);
