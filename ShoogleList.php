@@ -24,7 +24,7 @@ function wfShoogleList() {
 class ShoogleListSortable {
 
     private static $QUERY_PARAMETER = 'shoogleOrder';
-    public static $SORTABLE_FIELDS = array('cl_timestamp', 'page_id', 'cl_sortkey');
+    public static $SORTABLE_FIELDS = array('page_touched', 'page_id', 'cl_sortkey');
 
     public function __construct() {
         global $wgParser;
