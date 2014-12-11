@@ -5,10 +5,10 @@ $wgExtensionFunctions[] = 'wfShoogleList';
 $wgExtensionCredits['parserhook'][] = array(
         'path'            => __FILE__,
         'name'            => 'ShoogleList',
-        'version'         => '0.00001',
-        'author'          => 'Schinken',
-        'url'             => 'http://www.hackerspace-bamberg.de',
-        'description'     => 'Generates a category list in Shoogle-Style'  );
+        'version'         => '1.0',
+        'author'          => 'Christopher Schirner',
+        'url'             => 'https://github.com/schinken/mediawiki-shooglelist',
+        'description'     => 'Generates a category list based on a project template'  );
 
 // Set up the new special page
 $dir = dirname( __FILE__ ) . '/';
