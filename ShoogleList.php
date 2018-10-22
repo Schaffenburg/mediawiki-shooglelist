@@ -12,7 +12,7 @@ $wgExtensionCredits['parserhook'][] = [
     'url' => 'https://github.com/schinken/mediawiki-shooglelist',
     'description' => 'Generates a category list based on a project template'];
 
-$wgResourceModules['shooglelist'] => [
+$wgResourceModules['shooglelist'] = [
     'styles' => ['ShoogleList.css']
 ];
 
