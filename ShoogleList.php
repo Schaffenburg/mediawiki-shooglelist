@@ -12,10 +12,8 @@ $wgExtensionCredits['parserhook'][] = [
     'url' => 'https://github.com/schinken/mediawiki-shooglelist',
     'description' => 'Generates a category list based on a project template'];
 
-$wgResourceModules[] = [
-    'shooglelist' => [
-        'styles' => 'ShoogleList.css',
-    ],
+$wgResourceModules['shooglelist'] => [
+    'styles' => ['ShoogleList.css']
 ];
 
 // Set up the new special page
