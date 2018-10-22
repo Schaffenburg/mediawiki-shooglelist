@@ -10,6 +10,13 @@ $wgExtensionCredits['parserhook'][] = array(
         'url'             => 'https://github.com/schinken/mediawiki-shooglelist',
         'description'     => 'Generates a category list based on a project template'  );
 
+$wgResourceModules[] = [
+    'shooglelist' => [
+        'styles' => 'ShoogleList.css'
+    ]
+];
+
+
 // Set up the new special page
 $dir = dirname( __FILE__ ) . '/';
 $wgExtensionMessagesFiles['ShoogleList'] = $dir . 'ShoogleList.i18n.php';
@@ -150,7 +157,7 @@ class ShoogleList {
 
 
         global $wgOut, $wgScriptPath;
-        $wgOut->addExtensionStyle("{$wgScriptPath}/extensions/ShoogleList/ShoogleList.css?x=y");
+        $wgOut->addModules( 'shooglelist' );
 
         $localParser = new Parser();
         $output = $localParser->parse($output, $parser->mTitle, $parser->mOptions);
