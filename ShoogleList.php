@@ -31,24 +31,14 @@ function wfShoogleList() {
 class ShoogleListSortable {
 
     private static $QUERY_PARAMETER = 'shoogleOrder';
-    public static $SORTABLE_FIELDS = ['page_touched', 'page_id', 'cl_sortkey'];
+    static $SORTABLE_FIELDS = ['page_touched', 'page_id', 'cl_sortkey'];
 
-    public function __construct() {
+    function __construct() {
         global $wgParser;
         $wgParser->setHook('shoogleSortable', [&$this, 'hookShoogleSortable']);
     }
 
-    public function hookShoogleSortable($category, $argv, $parser) {
-
-        $defaultField = 'page_id';
-        if (isset($argv['defaultField'])) {
-            $defaultField = $argv['defaultField'];
-        }
-
-        $defaultDirection = 'ASC';
-        if (isset($argv['defaultDirection'])) {
-            $defaultDirection = $argv['defaultDirection'];
-        }
+    function hookShoogleSortable($category, $argv, $parser) {
 
         // we need at least one fields
         $fields = explode(",", $argv['fields']);
@@ -79,7 +69,7 @@ class ShoogleListSortable {
         return $output;
     }
 
-    public static function getOrderTableAndDirection(array $fields, $orderByField = 'page_id', $orderByDirection = 'DESC') {
+    static function getOrderTableAndDirection(array $fields, $orderByField = 'page_id', $orderByDirection = 'DESC') {
 
         if (isset($_REQUEST[self::$QUERY_PARAMETER]) && !empty($_REQUEST[self::$QUERY_PARAMETER])) {
 
