@@ -377,7 +377,7 @@ class ShoogleList_Article {
         $this->title = $Title;
         $this->wiki_article = new Article( $Title );
 
-        $this->content = $this->wiki_article->getContent();
+        $this->content = $this->content = $this->wiki_article->getPage()->getContent()->getNativeData();
         $this->process_attributes();
     }
 
