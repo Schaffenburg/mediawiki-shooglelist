@@ -3,6 +3,7 @@
     list-style-type: none;
     list-style-image: none;
 }
+
 .shoogle-item {
     float: left;
     width: 190px;
@@ -20,12 +21,13 @@
 
     display: block;
 }
+
 .shoogle-title a, .shoogle-title a:visited, .shoogle-title a:link {
     color: #222;
 }
 
 .shoogle-image {
-    display: block;    
+    display: block;
 }
 
 .shoogle-teaser {
@@ -44,10 +46,10 @@
 }
 
 .shoogle-potd .shoogle-title {
-    font-size: 14px;    
+    font-size: 14px;
 }
 
 .shoogle-sortable {
-  text-align: right;
-  margin-right: 45px;
+    text-align: right;
+    margin-right: 45px;
 }

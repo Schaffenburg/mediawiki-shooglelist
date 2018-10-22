@@ -105,16 +105,14 @@ class ShoogleListSortable {
 class ShoogleList {
 
     // Default configuration
-    private $settings = [
-    ];
+    private $settings = [];
 
-    public function __construct() {
+    function __construct() {
         global $wgParser;
         $wgParser->setHook('shoogle', [&$this, 'hookShoogle']);
     }
 
-    public function hookShoogle($category, $argv, $parser) {
-
+    function hookShoogle($category, $argv, $parser) {
         $parser->disableCache();
 
         // Merge user specific settings with own defaults
@@ -152,24 +150,16 @@ class ShoogleList {
 
         }
 
-        global $wgOut, $wgScriptPath;
+        global $wgOut;
         $wgOut->addModules('shooglelist');
 
         $localParser = new Parser();
         $output = $localParser->parse($output, $parser->mTitle, $parser->mOptions);
 
         return $output->getText();
-
     }
 
-    /**
-     * Renders a list of "projects of the day" and cache them for at least 24h
-     *
-     * @param ShoogleList_Articles[] $articles Articles
-     * @param array $argv ShoogleList Arguments
-     */
-
-    private function get_project_of_the_day($articles, $argv) {
+    function get_project_of_the_day($articles, $argv) {
 
         // Check if there is a cached potd list, if yes, return
         if (($cache = $this->get_cache('shoogle_potd_cache')) !== false) {
@@ -250,13 +240,6 @@ class ShoogleList {
         return $text;
     }
 
-    /**
-     * Renders a list of articles in wiki format
-     *
-     * @param ShoogleList_Articles[] $articles Articles
-     * @param array $argv ShoogleList Arguments
-     */
-
     private function get_project_list($articles, $argv) {
 
         $thumb_size = 180;
@@ -330,13 +313,6 @@ class ShoogleList {
         return $Articles;
     }
 
-    /**
-     * Get cached data by $key, if apc is available
-     *
-     * @param string $key apc cache key
-     * @return bool|mixed
-     */
-
     private function get_cache($key) {
 
         if (!function_exists('apc_fetch')) {
@@ -345,12 +321,6 @@ class ShoogleList {
 
         return apc_fetch($key);
     }
-
-    /**
-     * Writes data to apc cache by $key
-     *
-     * @param string $key apc cache key
-     */
 
     private function write_cache($key, $data, $cache_time) {
         if (function_exists('apc_store')) {
@@ -372,8 +342,7 @@ class ShoogleList_Article {
         'beschreibung' => '',
     ];
 
-    public function __construct($Title) {
-
+    function __construct($Title) {
         $this->title = $Title;
         $this->wiki_article = new Article($Title);
 
@@ -415,32 +384,31 @@ class ShoogleList_Article {
         return $this->attributes[$Key];
     }
 
-    public static function set_default($key, $value) {
+    static function set_default($key, $value) {
         self::$defaults[$key] = $value;
     }
 
-    public function get_image($Default = '') {
+    function get_image($Default = '') {
         return $this->get_attribute('image', $Default);
     }
 
-    public function get_description($Default = '') {
+    function get_description($Default = '') {
         return $this->get_attribute('beschreibung', $Default);
     }
 
-    public function get_name($Default = '') {
+    function get_name($Default = '') {
         return $this->get_attribute('name', $Default);
     }
 
-    public function is_visible() {
+    function is_visible() {
         return ($this->get_attribute('visible') === true);
     }
 
-    public function get_title() {
+    function get_title() {
         return (string)$this->title;
     }
 
-    public function get_content() {
+    function get_content() {
         return $this->content;
     }
-
 }
