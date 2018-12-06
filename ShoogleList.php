@@ -276,6 +276,11 @@ class ShoogleList {
             $trim = (int)$argv['trim_text'];
         }
 
+        $item_class = "shoogle-item";
+        if (isset($argv['item_class'])) {
+            $item_class = $argv['item_class'];
+        }
+
         $output = '<div class="shoogle-box">';
         $output .= '<ul class="shoogle-list clearfix">';
 
@@ -291,7 +296,7 @@ class ShoogleList {
                 $abbrv_desc = $this->trim_text($desc, $trim);
             }
 
-            $output .= '<li class="shoogle-item">';
+            $output .= sprintf('<li class=%s>', $item_class);
             $output .= sprintf('<span class="shoogle-title">[[%s|%s]]</span>', $article->get_title(), $article->get_name());
             $output .= sprintf('<span class="shoogle-image">[[Image:%1$s|%2$dpx|link=%3$s|alt=%3$s]]</span>', $article->get_image(), $thumb_size, $article->get_title());
             $output .= sprintf('<span class="shoogle-teaser" title="%s">%s</span>', $desc, $abbrv_desc);
