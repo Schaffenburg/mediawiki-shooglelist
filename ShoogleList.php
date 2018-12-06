@@ -131,7 +131,9 @@ class ShoogleList {
             case 'potd':
                 $output = $this->get_project_of_the_day($articles, $argv);
                 break;
-
+            case 'latest':
+                $output = $this->get_latest_project($articles, $argv);
+                break;
             default:
                 $output = $this->get_project_list($articles, $argv);
                 break;
@@ -216,6 +218,40 @@ class ShoogleList {
 
         $cachetime = $dt->getTimestamp() - time();
         $this->write_cache('shoogle_potd_cache', $output, $cachetime);
+
+        return $output;
+    }
+
+    function get_latest_project($articles, $argv) {
+
+        // Check if there is a cached potd list, if yes, return
+        if (($cache = $this->get_cache('shoogle_latestproject_cache')) !== false) {
+            return $cache;
+        }
+
+        $filtered_article = [];
+
+        // filter videos
+        foreach ($articles as $article) {
+
+            // Skip invisible projects
+            if (!$article->is_visible()) {
+                continue;
+            }
+            $filtered_article[] = $article;
+            if (count($filtered_article))
+                break;
+        }
+
+        // Render project list
+        $output = $this->get_project_list($filtered_article, $argv);
+
+        // Cache to the next midnight.
+        $dt = new DateTime('now');
+        $dt->modify('tomorrow');
+
+        $cachetime = $dt->getTimestamp() - time();
+        $this->write_cache('shoogle_latestproject_cache', $output, $cachetime);
 
         return $output;
     }
