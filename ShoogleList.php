@@ -26,10 +26,23 @@ function wfShoogleList() {
     new ShoogleListSortable();
 }
 
+function sort_status($a, $b) {
+    return $a->get_status() == $b->get_status() ? 0 : ( $a->get_status() > $b->get_status() ) ? 1 : -1;
+}
+
+function sort_autor($a, $b) {
+    return $a->get_autor() == $b->get_autor() ? 0 : ( $a->get_autor() > $b->get_autor() ) ? 1 : -1;
+}
+
 class ShoogleListSortable {
 
     private static $QUERY_PARAMETER = 'shoogleOrder';
+
+    // these are mediawiki database fields
     static $SORTABLE_FIELDS = ['page_touched', 'page_id', 'cl_sortkey'];
+
+    // these are keys from the template
+    static $SORTABLE_KEYS = ['autor','status'];
 
     function __construct() {
         global $wgParser;
@@ -43,20 +56,31 @@ class ShoogleListSortable {
         if (count($fields) < 1) {
             return '';
         }
+        $keys = explode(",", $argv['keys']);
 
-        $selectedField = false;
+        $selectedOption = false;
         if (isset($_REQUEST[self::$QUERY_PARAMETER]) && !empty($_REQUEST[self::$QUERY_PARAMETER])) {
-            $selectedField = $_REQUEST[self::$QUERY_PARAMETER];
+            $selectedOption = $_REQUEST[self::$QUERY_PARAMETER];
         }
 
         $output = '<form method="GET" onchange="submit()" class="shoogle-sortable">';
         $output .= sprintf('<select name="%s">', self::$QUERY_PARAMETER);
 
         foreach ($fields as $field) {
-            foreach (['DESC' => '-', 'ASC' => ''] as $order => $symbol) {
-                $selected = ($symbol . $field == $selectedField) ? 'selected' : '';
-                $output .= sprintf('<option value="%s" %s>%s (%s)</value>', $symbol . $field, $selected,
+            foreach (['DESC' => '-', 'ASC' => '+'] as $order => $symbol) {
+                $value = $symbol.":field:".$field;
+                $selected = ($value == $selectedOption) ? 'selected' : '';
+                $output .= sprintf('<option value="%s" %s>%s (%s)</value>', $value, $selected,
                     wfMessage('field_' . $field)->text(),
+                    wfMessage('sort_' . $order)->text());
+            }
+        }
+        foreach ($keys as $key) {
+            foreach (['DESC' => '-', 'ASC' => '+'] as $order => $symbol) {
+                $value = $symbol.":key:".$key;
+                $selected = ($value == $selectedOption) ? 'selected' : '';
+                $output .= sprintf('<option value="%s" %s>%s (%s)</value>', $value, $selected,
+                    wfMessage('key_' . $key)->text(),
                     wfMessage('sort_' . $order)->text());
             }
         }
@@ -67,26 +91,36 @@ class ShoogleListSortable {
         return $output;
     }
 
-    static function getOrderTableAndDirection(array $fields, $orderByField = 'page_id', $orderByDirection = 'DESC') {
+    static function getOrderTableAndDirection(array $fields, array $keys, $orderByField = 'page_id', $orderByKey = null, $orderByDirection = 'DESC') {
 
         if (isset($_REQUEST[self::$QUERY_PARAMETER]) && !empty($_REQUEST[self::$QUERY_PARAMETER])) {
 
-            $reqValue = $_REQUEST[self::$QUERY_PARAMETER];
+            $req = explode(":", $_REQUEST[self::$QUERY_PARAMETER]);
+            $req_count = count($req);
 
-            if ($reqValue[0] == '-') {
+            if ($req_count == 1) {
+               $req = ['+', 'field', '$_REQUEST[self::$QUERY_PARAMETER]'];
+            }
+            if ($req[0] == '-') {
                 $reqOrderByDirection = 'DESC';
-                $reqValue = substr($reqValue, 1);
             } else {
                 $reqOrderByDirection = 'ASC';
             }
 
-            if (in_array($reqValue, $fields)) {
-                $orderByField = $reqValue;
-                $orderByDirection = $reqOrderByDirection;
+            if ($req[1] == "field") {
+                if (in_array($req[2], $fields)) {
+                    $orderByField = $req[2];
+                    $orderByDirection = $reqOrderByDirection;
+                }
+            } else {
+                if (in_array($req[2], $keys)) {
+                    $orderByKey = $req[2];
+                    $orderByDirection = $reqOrderByDirection;
+                }
             }
         }
 
-        return [$orderByField, $orderByDirection];
+        return [$orderByField, $orderByKey, $orderByDirection];
     }
 }
 
@@ -121,10 +155,10 @@ class ShoogleList {
         // Retrieve internal wiki title of the category
         $title = Title::newFromText($category);
 
-        list($orderByField, $orderByDirection) = ShoogleListSortable::getOrderTableAndDirection(ShoogleListSortable::$SORTABLE_FIELDS);
+        list($orderByField, $orderByKey, $orderByDirection) = ShoogleListSortable::getOrderTableAndDirection(ShoogleListSortable::$SORTABLE_FIELDS,ShoogleListSortable::$SORTABLE_KEYS);
 
         // Retrieve all articles by current category
-        $articles = $this->get_articles_by_category($title, $orderByField, $orderByDirection);
+        $articles = $this->get_articles_by_category($title, $orderByField, $orderByKey, $orderByDirection);
 
         switch (@$argv['type']) {
 
@@ -300,6 +334,8 @@ class ShoogleList {
             $output .= sprintf('<span class="shoogle-title">[[%s|%s]]</span>', $article->get_title(), $article->get_name());
             $output .= sprintf('<span class="shoogle-image">[[Image:%1$s|%2$dpx|link=%3$s|alt=%3$s]]</span>', $article->get_image(), $thumb_size, $article->get_title());
             $output .= sprintf('<span class="shoogle-teaser" title="%s">%s</span>', $desc, $abbrv_desc);
+            $output .= sprintf('<br /><span>%s</span>', $article->get_status());
+            $output .= sprintf('<br /><span>%s</span>', $article->get_autor());
             $output .= '</li>';
         }
 
@@ -310,7 +346,7 @@ class ShoogleList {
         return $output;
     }
 
-    private function get_articles_by_category($Title, $orderByField = 'cl_sortkey', $orderByDirection = 'DESC') {
+    private function get_articles_by_category($Title, $orderByField = null, $orderByKey = null, $orderByDirection = 'DESC') {
 
         $dbr = wfGetDB(DB_SLAVE);
 
@@ -328,18 +364,26 @@ class ShoogleList {
         }
 
         // convert results list into an array
-        $Articles = [];
+        $articles = [];
         while ($Article = $dbr->fetchRow($res)) {
             $Title = Title::makeTitle($Article['page_namespace'], $Article['page_title']);
             if ($Title->getNamespace() != NS_CATEGORY) {
-                $Articles[] = new ShoogleList_Article($Title);
+                $articles[] = new ShoogleList_Article($Title);
             }
         }
 
         // free the results
         $dbr->freeResult($res);
 
-        return $Articles;
+        if ($orderByKey) {
+            $sortfunc = "sort_".$orderByKey;
+            usort ($articles, $sortfunc);
+            if ($orderByDirection == 'ASC') {
+              $articles = array_reverse($articles);
+            }
+        }
+
+        return $articles;
     }
 
     private function get_cache($key) {
@@ -369,6 +413,8 @@ class ShoogleList_Article {
     private static $defaults = [
         'image' => '',
         'beschreibung' => '',
+        'status' => 'unknown',
+        'autor' => 'anonymous',
     ];
 
     function __construct($Title) {
@@ -390,6 +436,8 @@ class ShoogleList_Article {
             'name' => $this->title,
             'image' => self::$defaults['image'],
             'beschreibung' => self::$defaults['beschreibung'],
+            'status' => self::$defaults['status'],
+            'autor' => self::$defaults['autor'],
             'visible' => true,
         ];
 
@@ -427,6 +475,14 @@ class ShoogleList_Article {
 
     function get_name($Default = '') {
         return $this->get_attribute('name', $Default);
+    }
+
+    function get_status($Default = '') {
+        return $this->get_attribute('status', $Default);
+    }
+
+    function get_autor($Default = '') {
+        return $this->get_attribute('autor', $Default);
     }
 
     function is_visible() {

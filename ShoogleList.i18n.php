@@ -18,6 +18,8 @@ $messages['en'] = [
     'field_cl_sortkey' => 'alphabetical',
     'field_page_touched' => 'last change',
     'field_page_id' => 'creation date',
+    'key_status' => 'status',
+    'key_autor' => 'author',
 ];
 
 $messages['de'] = [
@@ -26,4 +28,6 @@ $messages['de'] = [
     'field_cl_sortkey' => 'Alphabetisch',
     'field_page_touched' => 'Letzte Änderung',
     'field_page_id' => 'Erstellungsdatum',
+    'key_status' => 'Status',
+    'key_autor' => 'Autor',
 ];
