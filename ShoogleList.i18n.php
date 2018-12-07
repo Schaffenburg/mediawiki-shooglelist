@@ -20,6 +20,8 @@ $messages['en'] = [
     'field_page_id' => 'creation date',
     'key_status' => 'status',
     'key_autor' => 'author',
+    'key_datum' => 'event date',
+    'key_kategorie' => 'category',
 ];
 
 $messages['de'] = [
@@ -30,4 +32,6 @@ $messages['de'] = [
     'field_page_id' => 'Erstellungsdatum',
     'key_status' => 'Status',
     'key_autor' => 'Autor',
+    'key_datum' => 'Veranstaltungsdatum',
+    'key_kategorie' => 'Kategorie',
 ];

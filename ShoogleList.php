@@ -23,6 +23,8 @@ $wgExtensionMessagesFiles['ShoogleList'] = $dir . 'ShoogleList.i18n.php';
 // Register parser-hook
 function wfShoogleList() {
     new ShoogleList();
+    new ShoogleProjectList();
+    new ShoogleEventList();
     new ShoogleListSortable();
 }
 
@@ -34,15 +36,20 @@ function sort_autor($a, $b) {
     return $a->get_autor() == $b->get_autor() ? 0 : ( $a->get_autor() > $b->get_autor() ) ? 1 : -1;
 }
 
+function sort_datum($a, $b) {
+    return $a->get_date() == $b->get_date() ? 0 : ( $a->get_date() > $b->get_date() ) ? 1 : -1;
+}
+
+function sort_kategorie($a, $b) {
+    return $a->get_category() == $b->get_category() ? 0 : ( $a->get_category() > $b->get_category() ) ? 1 : -1;
+}
+
 class ShoogleListSortable {
 
     private static $QUERY_PARAMETER = 'shoogleOrder';
 
     // these are mediawiki database fields
     static $SORTABLE_FIELDS = ['page_touched', 'page_id', 'cl_sortkey'];
-
-    // these are keys from the template
-    static $SORTABLE_KEYS = ['autor','status'];
 
     function __construct() {
         global $wgParser;
@@ -61,6 +68,8 @@ class ShoogleListSortable {
         $selectedOption = false;
         if (isset($_REQUEST[self::$QUERY_PARAMETER]) && !empty($_REQUEST[self::$QUERY_PARAMETER])) {
             $selectedOption = $_REQUEST[self::$QUERY_PARAMETER];
+        } else if (isset($argv['default'])) {
+            $selectedOption = $argv['default'];
         }
 
         $output = '<form method="GET" onchange="submit()" class="shoogle-sortable">';
@@ -127,21 +136,16 @@ class ShoogleListSortable {
 class ShoogleList {
 
     // Default configuration
-    private $settings = [];
+    protected $settings = [];
 
-    function __construct() {
-        global $wgParser;
-        $wgParser->setHook('shoogle', [&$this, 'hookShoogle']);
-    }
+    // these are keys from the template
+    static $SORTABLE_KEYS = [];
 
-    function hookShoogle($category, $argv, $parser) {
+    function hookShoogleListBase($category, $argv, $parser) {
         $parser->disableCache();
 
         // Merge user specific settings with own defaults
         $this->settings = array_merge($this->settings, $argv);
-
-        $localParser = new Parser();
-        $category = $localParser->preprocess($category, $parser->mTitle, $parser->mOptions, false);
 
         // Set defaults to all articles
         if (isset($argv['defaultimg'])) {
@@ -151,14 +155,105 @@ class ShoogleList {
         if (isset($argv['defaultdesc'])) {
             ShoogleList_Article::set_default('beschreibung', $argv['defaultdesc']);
         }
+    }
+
+    protected function get_articles_by_category($new_article_closure, $template, $title, $orderByField = null, $orderByKey = null, $orderByDirection = 'DESC') {
+        $dbr = wfGetDB(DB_SLAVE);
+
+        // query database
+        $res = $dbr->select(
+            ['page', 'categorylinks'],
+            ['page_title', 'page_namespace', $orderByField],
+            ['cl_from = page_id', 'cl_to' => $title->getDBKey()],
+            "shoogleList",
+            ['ORDER BY' => sprintf('%s %s', $orderByField, $orderByDirection)]
+        );
+
+        if ($res === false) {
+            echo("<!-- ShoogleList::get_articles_by_category $dbr->select failed -->");
+            return [];
+        }
+
+        // convert results list into an array
+        $articles = [];
+
+        while ($Article = $dbr->fetchRow($res)) {
+            $title = title::makeTitle($Article['page_namespace'], $Article['page_title']);
+            if ($title->getNamespace() != NS_CATEGORY) {
+                $articles[] = $new_article_closure($template, $title);
+            }
+        }
+
+        // free the results
+        $dbr->freeResult($res);
+
+        if ($orderByKey) {
+            $sortfunc = "sort_".$orderByKey;
+            usort ($articles, $sortfunc);
+            if ($orderByDirection == 'ASC') {
+              $articles = array_reverse($articles);
+            }
+        }
+
+        return $articles;
+    }
+
+    protected function trim_text($text, $length, $abbrv = '...') {
+        if (strlen($text) > $length) {
+            return substr($text, 0, $length - strlen($abbrv)) . $abbrv;
+        }
+
+        return $text;
+    }
+
+    protected function get_cache($key) {
+
+        if (!function_exists('apc_fetch')) {
+            return false;
+        }
+
+        return apc_fetch($key);
+    }
+
+    protected function write_cache($key, $data, $cache_time) {
+        if (function_exists('apc_store')) {
+            apc_store($key, $data, $cache_time);
+        }
+    }
+}
+
+class ShoogleProjectList extends ShoogleList {
+    // these are keys from the template
+    static $SORTABLE_KEYS = ['autor', 'status'];
+
+    function __construct() {
+        global $wgParser;
+        $wgParser->setHook('shoogle', [&$this, 'hookShoogleProjectList']);
+        $wgParser->setHook('shoogleProjectList', [&$this, 'hookShoogleProjectList']);
+    }
+
+    function hookShoogleProjectList($category, $argv, $parser) {
+        $this->hookShoogleListBase($category, $argv, $parser);
+
+        $localParser = new Parser();
+        $category = $localParser->preprocess($category, $parser->mTitle, $parser->mOptions, false);
+
+        $template = "Projekt";
+        if (isset($argv['template'])) {
+            $template = $argv['template'];
+        }
 
         // Retrieve internal wiki title of the category
         $title = Title::newFromText($category);
 
-        list($orderByField, $orderByKey, $orderByDirection) = ShoogleListSortable::getOrderTableAndDirection(ShoogleListSortable::$SORTABLE_FIELDS,ShoogleListSortable::$SORTABLE_KEYS);
+        $new_article_closure = function ($template, $title) {
+            return new ShoogleList_ProjectArticle($template, $title);
+        };
+
+        list($orderByField, $orderByKey, $orderByDirection) = ShoogleListSortable::getOrderTableAndDirection(ShoogleListSortable::$SORTABLE_FIELDS,self::$SORTABLE_KEYS);
 
         // Retrieve all articles by current category
-        $articles = $this->get_articles_by_category($title, $orderByField, $orderByKey, $orderByDirection);
+        $articles = $this->get_articles_by_category($new_article_closure, $template, $title, $orderByField, $orderByKey, $orderByDirection);
 
         switch (@$argv['type']) {
 
@@ -290,14 +385,6 @@ class ShoogleList {
         return $output;
     }
 
-    private function trim_text($text, $length, $abbrv = '...') {
-        if (strlen($text) > $length) {
-            return substr($text, 0, $length - strlen($abbrv)) . $abbrv;
-        }
-
-        return $text;
-    }
-
     private function get_project_list($articles, $argv) {
 
         $thumb_size = 180;
@@ -345,115 +432,244 @@ class ShoogleList {
 
         return $output;
     }
+}
 
-    private function get_articles_by_category($Title, $orderByField = null, $orderByKey = null, $orderByDirection = 'DESC') {
+class ShoogleEventList extends ShoogleList {
+    // these are keys from the template
+    static $SORTABLE_KEYS = ['datum', 'kategorie'];
 
-        $dbr = wfGetDB(DB_SLAVE);
+    function __construct() {
+        global $wgParser;
+        $wgParser->setHook('shoogleEventList', [&$this, 'hookShoogleEventList']);
+    }
 
-        // query database
-        $res = $dbr->select(
-            ['page', 'categorylinks'],
-            ['page_title', 'page_namespace', $orderByField],
-            ['cl_from = page_id', 'cl_to' => $Title->getDBKey()],
-            "shoogleList",
-            ['ORDER BY' => sprintf('%s %s', $orderByField, $orderByDirection)]
-        );
+    function hookShoogleEventList($category, $argv, $parser) {
+        $this->hookShoogleListBase($category, $argv, $parser);
 
-        if ($res === false) {
-            return [];
+        $localParser = new Parser();
+        $category = $localParser->preprocess($category, $parser->mTitle, $parser->mOptions, false);
+
+        $template = "Veranstaltung";
+        if (isset($argv['template'])) {
+            $template = $argv['template'];
         }
 
-        // convert results list into an array
-        $articles = [];
-        while ($Article = $dbr->fetchRow($res)) {
-            $Title = Title::makeTitle($Article['page_namespace'], $Article['page_title']);
-            if ($Title->getNamespace() != NS_CATEGORY) {
-                $articles[] = new ShoogleList_Article($Title);
+        // Retrieve internal wiki title of the category
+        $title = Title::newFromText($category);
+
+        $new_article_closure = function ($template, $title) {
+            return new ShoogleList_EventArticle($template, $title);
+        };
+
+        list($orderByField, $orderByKey, $orderByDirection) = ShoogleListSortable::getOrderTableAndDirection(ShoogleListSortable::$SORTABLE_FIELDS,self::$SORTABLE_KEYS);
+
+        // Retrieve all articles by current category
+        $articles = $this->get_articles_by_category($new_article_closure, $template, $title, $orderByField, $orderByKey, $orderByDirection);
+
+        switch (@$argv['type']) {
+            case 'upcoming':
+                $output = $this->get_upcoming_events($articles, $argv);
+                break;
+            case 'past':
+                $output = $this->get_past_events($articles, $argv);
+                break;
+            default:
+                $output = $this->get_event_list($articles, $argv);
+                break;
+        }
+
+        global $wgOut;
+        $wgOut->addModules('ext.shooglelist');
+
+        $localParser = new Parser();
+        $output = $localParser->parse($output, $parser->mTitle, $parser->mOptions);
+
+        return $output->getText();
+    }
+
+    private function get_event_list($articles, $argv) {
+
+        $output = '<div>';
+        $output .= '<ul>';
+
+        foreach ($articles as $article) {
+
+            if (!$article->is_visible()) {
+                continue;
+            }
+
+            $desc = $article->get_description();
+            $abbrv_desc = $desc;
+
+            $output .= sprintf('<li>');
+            $output .= sprintf('<span>[[%s|%s]]</span>', $article->get_title(), $article->get_name());
+            $output .= sprintf(' <span>%s</span>', $desc, $abbrv_desc);
+            $output .= sprintf(' <span>%s</span>', $article->get_date());
+            $output .= sprintf(' <span>%s</span>', $article->get_place());
+            $output .= sprintf(' <span>%s</span>', $article->get_category());
+            $output .= sprintf(' <span>%s</span>', $article->get_organizer());
+            $output .= '</li>';
+        }
+
+        $output .= '</ul>';
+        $output .= '</div>';
+        $output .= "__NOTOC__\n";
+
+        return $output;
+    }
+
+    private function get_event_shortlist($articles, $argv) {
+
+        $output = '<div>';
+        $output .= '<ul>';
+
+        foreach ($articles as $article) {
+
+            if (!$article->is_visible()) {
+                continue;
+            }
+
+            $desc = $article->get_description();
+            $abbrv_desc = $desc;
+
+            $output .= sprintf('<li>');
+            $output .= sprintf('<span>[[%s|%s]]</span>', $article->get_title(), $article->get_name());
+            $output .= sprintf(' <span>%s</span>', $article->get_date());
+            $output .= '</li>';
+        }
+
+        $output .= '</ul>';
+        $output .= '</div>';
+        $output .= "__NOTOC__\n";
+
+        return $output;
+    }
+
+    private function get_upcoming_events($articles, $argv) {
+        if (($cache = $this->get_cache('shoogle_upcoming_events_cache')) !== false) {
+            return $cache;
+        }
+
+        $limit = 4;
+        if (isset($argv['limit'])) {
+            $limit = (int)$argv['limit'];
+        }
+
+        usort ($articles, "sort_datum");
+
+        $dt = new DateTime('now');
+
+        $upcoming_articles = [];
+
+        foreach ($articles as $article) {
+            $article_date = date_create_from_format ("Y-m-d+", $article->get_date());
+
+            if (!$article_date) {
+               continue;
+            }
+
+            if ($article_date >= $dt) {
+                $upcoming_articles[] = $article;
+            }
+            else
+            if (count($upcoming_articles) >= $limit) {
+                break;
             }
         }
 
-        // free the results
-        $dbr->freeResult($res);
+        $output = $this->get_event_shortlist($upcoming_articles, $argv);
 
-        if ($orderByKey) {
-            $sortfunc = "sort_".$orderByKey;
-            usort ($articles, $sortfunc);
-            if ($orderByDirection == 'ASC') {
-              $articles = array_reverse($articles);
+        $dt->modify('tomorrow');
+        $cachetime = $dt->getTimestamp() - time();
+        $this->write_cache('shoogle_upcoming_events_cache', $output, $cachetime);
+
+        return $output;
+    }
+
+    private function get_past_events($articles, $argv) {
+        if (($cache = $this->get_cache('shoogle_past_events_cache')) !== false) {
+            return $cache;
+        }
+
+        $limit = 4;
+        if (isset($argv['limit'])) {
+            $limit = (int)$argv['limit'];
+        }
+
+        usort ($articles, "sort_datum");
+        $articles = array_reverse($articles);
+
+        $dt = new DateTime('now');
+
+        $past_articles = [];
+
+        foreach ($articles as $article) {
+            $article_date = date_create_from_format ("Y-m-d+", $article->get_date());
+
+            if (!$article_date) {
+               continue;
+            }
+            if ($article_date < $dt) {
+                $past_articles[] = $article;
+            }
+            if (count($past_articles) >= $limit) {
+                break;
             }
         }
 
-        return $articles;
+        $output = $this->get_event_shortlist($past_articles, $argv);
+
+        $dt->modify('tomorrow');
+        $cachetime = $dt->getTimestamp() - time();
+        $this->write_cache('shoogle_past_events_cache', $output, $cachetime);
+
+        return $output;
     }
-
-    private function get_cache($key) {
-
-        if (!function_exists('apc_fetch')) {
-            return false;
-        }
-
-        return apc_fetch($key);
-    }
-
-    private function write_cache($key, $data, $cache_time) {
-        if (function_exists('apc_store')) {
-            apc_store($key, $data, $cache_time);
-        }
-    }
-
 }
 
 class ShoogleList_Article {
 
-    private $title = null;
-    private $wiki_article = null;
-    private $content = '';
-    private $attributes = [];
-
-    private static $defaults = [
+    protected $title = null;
+    protected $wiki_article = null;
+    protected $content = '';
+    protected static $defaults = [
+        'name' => "noname",
+        'visible' => true,
         'image' => '',
         'beschreibung' => '',
-        'status' => 'unknown',
-        'autor' => 'anonymous',
     ];
 
-    function __construct($Title) {
-        $this->title = $Title;
-        $this->wiki_article = new Article($Title);
+    protected $attributes = [];
 
-        $this->content = $this->content = $this->wiki_article->getPage()->getContent()->getNativeData();
-        $this->process_attributes();
+    function __construct($template, $title) {
+        $this->title = $title;
+        $this->wiki_article = new Article($title);
+        $this->content = $this->wiki_article->getPage()->getContent()->getNativeData();
+        $this->attributes = self::$defaults;
+        $this->process_attributes($template);
     }
 
-    private function process_attributes() {
-
+    protected function process_attributes($template) {
         $projectTag = '';
-        if (preg_match('/{{Infobox Projekt(.*)}}/s', $this->content, $m)) {
+        if (preg_match('/{{Infobox '.$template.'(.*)}}/s', $this->content, $m)) {
             $projectTag = $m[1];
         }
 
-        $attr = [
-            'name' => $this->title,
-            'image' => self::$defaults['image'],
-            'beschreibung' => self::$defaults['beschreibung'],
-            'status' => self::$defaults['status'],
-            'autor' => self::$defaults['autor'],
-            'visible' => true,
-        ];
+        $this->attributes['name'] = $this->title;
 
-        foreach ($attr as $key => $value) {
+        foreach ($this->attributes as $key => $value) {
             if (preg_match('/\|' . $key . '\s*=(.*)$/m', $projectTag, $m)) {
                 $val = trim($m[1]);
                 if (!empty($val)) {
-                    $attr[$key] = $val;
+                    $this->attributes[$key] = $val;
                 }
+            } else {
+                $this->attributes[$key] = self::$defaults[$key];
             }
         }
-
-        $this->attributes = $attr;
     }
 
-    private function get_attribute($Key, $Default = null) {
+    protected function get_attribute($Key, $Default = null) {
         if (!isset($this->attributes[$Key])) {
             return $Default;
         }
@@ -477,14 +693,6 @@ class ShoogleList_Article {
         return $this->get_attribute('name', $Default);
     }
 
-    function get_status($Default = '') {
-        return $this->get_attribute('status', $Default);
-    }
-
-    function get_autor($Default = '') {
-        return $this->get_attribute('autor', $Default);
-    }
-
     function is_visible() {
         return ($this->get_attribute('visible') === true);
     }
@@ -495,5 +703,49 @@ class ShoogleList_Article {
 
     function get_content() {
         return $this->content;
+    }
+}
+
+class ShoogleList_ProjectArticle extends ShoogleList_Article {
+
+    function __construct($template, $title) {
+        $this->set_default('status', 'unknown');
+        $this->set_default('autor', 'anonymous');
+        parent::__construct($template, $title);
+    }
+
+    function get_status($Default = '') {
+        return $this->get_attribute('status', $Default);
+    }
+
+    function get_autor($Default = '') {
+        return $this->get_attribute('autor', $Default);
+    }
+}
+
+class ShoogleList_EventArticle extends ShoogleList_Article {
+
+    function __construct($template, $title) {
+        $this->set_default('kategorie', 'uncategorized');
+        $this->set_default('datum', '1970-01-01');
+        $this->set_default('ort', 'nowhere');
+        $this->set_default('organisator', 'anonymous');
+        parent::__construct($template, $title);
+    }
+
+    function get_date($Default = '') {
+        return $this->get_attribute('datum', $Default);
+    }
+
+    function get_category($Default = '') {
+        return $this->get_attribute('kategorie', $Default);
+    }
+
+    function get_place($Default = '') {
+        return $this->get_attribute('ort', $Default);
+    }
+
+    function get_organizer($Default = '') {
+        return $this->get_attribute('organisator', $Default);
     }
 }
