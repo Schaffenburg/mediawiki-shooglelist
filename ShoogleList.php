@@ -7,9 +7,9 @@ $wgExtensionFunctions[] = 'wfShoogleList';
 $wgExtensionCredits['parserhook'][] = [
     'path' => __FILE__,
     'name' => 'ShoogleList',
-    'version' => '1.0',
-    'author' => 'Christopher Schirner',
-    'url' => 'https://github.com/schinken/mediawiki-shooglelist',
+    'version' => '1.1',
+    'author' => 'Christopher Schirner, Andreas Frisch',
+    'url' => 'https://github.com/schaffenburg/mediawiki-shooglelist',
     'description' => 'Generates a category list based on a project template'];
 
 $wgResourceModules['ext.shooglelist'] = [
