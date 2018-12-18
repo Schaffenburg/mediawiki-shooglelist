@@ -367,6 +367,9 @@ class ShoogleProjectList extends ShoogleList {
             if (!$article->is_visible()) {
                 continue;
             }
+            if (!in_array ($article->get_status(), ["beta", "unstable", "stable"])) {
+                continue;
+            }
             $filtered_article[] = $article;
             if (count($filtered_article))
                 break;
