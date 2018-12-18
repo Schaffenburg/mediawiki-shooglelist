@@ -422,7 +422,7 @@ class ShoogleProjectList extends ShoogleList {
             $output .= sprintf('<span class="shoogle-image">[[Image:%1$s|%2$dpx|link=%3$s|alt=%3$s]]</span>', $article->get_image(), $thumb_size, $article->get_title());
             $output .= sprintf('<span class="shoogle-teaser" title="%s">%s</span>', $desc, $abbrv_desc);
             $output .= sprintf('<br /><span>%s</span>', $article->get_status());
-            $output .= sprintf('<br /><span>%s</span>', $article->get_autor());
+            $output .= sprintf('<br /><span>%s</span>', $article->get_autor_link());
             $output .= '</li>';
         }
 
@@ -721,6 +721,14 @@ class ShoogleList_ProjectArticle extends ShoogleList_Article {
     function get_autor($Default = '') {
         return $this->get_attribute('autor', $Default);
     }
+
+    function get_autor_link($Default = '') {
+        $autorlink = $this->get_attribute('autor', $Default);
+        if (substr( $autorlink, 0, 11 ) !== "[[Benutzer:") {
+            $autorlink = sprintf('[[Benutzer:%1$s|%1$s]]', $autorlink);
+        }
+        return $autorlink;
+    }
 }
 
 class ShoogleList_EventArticle extends ShoogleList_Article {
@@ -746,6 +754,10 @@ class ShoogleList_EventArticle extends ShoogleList_Article {
     }
 
     function get_organizer($Default = '') {
+        return $this->get_attribute('organisator', $Default);
+    }
+
+    function get_organizer_link($Default = '') {
         return $this->get_attribute('organisator', $Default);
     }
 }
