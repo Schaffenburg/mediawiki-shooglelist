@@ -31,19 +31,19 @@ function wfShoogleList() {
 use MediaWiki\MediaWikiServices;
 
 function sort_status($a, $b) {
-    return $a->get_status() == $b->get_status() ? 0 : ( $a->get_status() > $b->get_status() ) ? 1 : -1;
+    return $a->get_status() == $b->get_status() ? 0 : (( $a->get_status() > $b->get_status() ) ? 1 : -1);
 }
 
 function sort_autor($a, $b) {
-    return $a->get_autor() == $b->get_autor() ? 0 : ( $a->get_autor() > $b->get_autor() ) ? 1 : -1;
+    return $a->get_autor() == $b->get_autor() ? 0 : (( $a->get_autor() > $b->get_autor() ) ? 1 : -1);
 }
 
 function sort_datum($a, $b) {
-    return $a->get_date() == $b->get_date() ? 0 : ( $a->get_date() > $b->get_date() ) ? 1 : -1;
+    return $a->get_date() == $b->get_date() ? 0 : (( $a->get_date() > $b->get_date() ) ? 1 : -1);
 }
 
 function sort_kategorie($a, $b) {
-    return $a->get_category() == $b->get_category() ? 0 : ( $a->get_category() > $b->get_category() ) ? 1 : -1;
+    return $a->get_category() == $b->get_category() ? 0 : (( $a->get_category() > $b->get_category() ) ? 1 : -1);
 }
 
 class ShoogleListSortable {
