@@ -28,6 +28,8 @@ function wfShoogleList() {
     new ShoogleListSortable();
 }
 
+use MediaWiki\MediaWikiServices;
+
 function sort_status($a, $b) {
     return $a->get_status() == $b->get_status() ? 0 : ( $a->get_status() > $b->get_status() ) ? 1 : -1;
 }
@@ -142,7 +144,7 @@ class ShoogleList {
     static $SORTABLE_KEYS = [];
 
     function hookShoogleListBase($category, $argv, $parser) {
-        $parser->disableCache();
+        $parser->getOutput()->updateCacheExpiry(0);
 
         // Merge user specific settings with own defaults
         $this->settings = array_merge($this->settings, $argv);
@@ -158,7 +160,8 @@ class ShoogleList {
     }
 
     protected function get_articles_by_category($new_article_closure, $template, $title, $orderByField = null, $orderByKey = null, $orderByDirection = 'DESC') {
-        $dbr = wfGetDB(DB_SLAVE);
+        $lb = MediaWikiServices::getInstance()->getDBLoadBalancer();
+        $dbr = $lb->getConnectionRef(DB_REPLICA);
 
         // query database
         $res = $dbr->select(
